@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
-import { WINDOWS_FLOW, MAC_FLOW } from './constants';
-import { OS, InstallerFlow } from './types';
-import { StepCard } from './components/StepCard';
-import { Benefits } from './components/Benefits';
+import { OS } from './types';
 import { ConfigurationGuide } from './components/ConfigurationGuide/index';
-import { Completion } from './components/Completion';
 
-type AppPhase = 'selection' | 'wizard' | 'benefits' | 'configuration' | 'completed';
+type AppPhase = 'selection' | 'configuration';
 
 const App: React.FC = () => {
   const [os, setOs] = useState<OS>(null);
@@ -16,11 +11,7 @@ const App: React.FC = () => {
 
   const handleOsSelect = (selectedOs: OS) => {
     setOs(selectedOs);
-    setPhase('wizard');
-  };
-
-  const handleWizardComplete = () => {
-    setPhase('benefits');
+    setPhase('configuration');
   };
 
   const handleBackToHome = () => {
@@ -28,154 +19,48 @@ const App: React.FC = () => {
     setPhase('selection');
   };
 
-  const handleStartConfiguration = () => {
-    setPhase('configuration');
-  };
-
   const handleConfigurationComplete = () => {
-    setPhase('completed');
+    setOs(null);
+    setPhase('selection');
   };
 
   return (
     <div className="h-screen w-screen bg-white text-neutral-900 font-sans selection:bg-black selection:text-white flex flex-col overflow-hidden">
-      
+
       {/* Header - Fixed Top */}
       <header className="w-full px-8 py-6 md:py-8 flex justify-between items-center shrink-0 z-50">
-          <div className="flex items-baseline gap-2 cursor-pointer" onClick={handleBackToHome}>
-             <span className="font-bold text-neutral-900 tracking-tighter text-xl md:text-2xl">Communokot</span>
-             <span className="font-medium bg-gradient-to-br from-slate-500 to-slate-400 bg-clip-text text-transparent tracking-tight text-lg md:text-xl">Installer</span>
-          </div>
-          <AnimatePresence>
-            {os && (
-               <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="px-3 py-1 bg-neutral-100 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest text-neutral-500 border border-neutral-200"
-               >
-                   {os === 'mac' ? 'macOS' : 'Windows'}
-               </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex items-baseline gap-2 cursor-pointer" onClick={handleBackToHome}>
+          <span className="font-bold text-neutral-900 tracking-tighter text-xl md:text-2xl">Communokot</span>
+          <span className="font-medium bg-gradient-to-br from-slate-500 to-slate-400 bg-clip-text text-transparent tracking-tight text-lg md:text-xl">Guide</span>
+        </div>
+        <AnimatePresence>
+          {os && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="px-3 py-1 bg-neutral-100 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest text-neutral-500 border border-neutral-200"
+            >
+              {os === 'mac' ? 'macOS' : 'Windows'}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Content - Centered */}
       <main className="flex-1 flex flex-col items-center justify-center w-full mx-auto pb-6 relative">
-            <AnimatePresence mode="wait">
-                {phase === 'selection' && (
-                    <OSSelector key="selector" onSelect={handleOsSelect} />
-                )}
-                
-                {phase === 'wizard' && os && (
-                    <div className="w-full max-w-2xl px-6">
-                        <Wizard 
-                            key="wizard" 
-                            flow={os === 'windows' ? WINDOWS_FLOW : MAC_FLOW} 
-                            onBackToHome={handleBackToHome}
-                            onComplete={handleWizardComplete}
-                        />
-                    </div>
-                )}
+        <AnimatePresence mode="wait">
+          {phase === 'selection' && (
+            <OSSelector key="selector" onSelect={handleOsSelect} />
+          )}
 
-                {phase === 'benefits' && (
-                    <Benefits key="benefits" onNext={handleStartConfiguration} />
-                )}
-
-                {phase === 'configuration' && os && (
-                    <ConfigurationGuide key="config" os={os} onComplete={handleConfigurationComplete} />
-                )}
-
-                {phase === 'completed' && (
-                    <Completion key="completion" onReset={handleBackToHome} />
-                )}
-            </AnimatePresence>
+          {phase === 'configuration' && os && (
+            <ConfigurationGuide key="config" os={os} onComplete={handleConfigurationComplete} />
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
-};
-
-const Wizard: React.FC<{ flow: InstallerFlow, onBackToHome: () => void, onComplete: () => void }> = ({ flow, onBackToHome, onComplete }) => {
-    const [stepIndex, setStepIndex] = useState(0);
-    const [direction, setDirection] = useState(0);
-
-    const handleNext = () => {
-        if (stepIndex < flow.steps.length - 1) {
-            setDirection(1);
-            setStepIndex(prev => prev + 1);
-        } else {
-            // Transition to Benefits phase
-            onComplete();
-        }
-    };
-
-    const handlePrev = () => {
-        if (stepIndex > 0) {
-            setDirection(-1);
-            setStepIndex(prev => prev - 1);
-        } else {
-            onBackToHome();
-        }
-    };
-
-    const isLast = stepIndex === flow.steps.length - 1;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-            className="w-full flex flex-col"
-        >
-            {/* 
-              Content Container with Fixed Height 
-              h-[480px] ensures it fits on small laptops (768px height)
-              Calculation: 208px (visual) + 24px (gap) + 180px (content) ~ 420px + buffer
-            */}
-            <div className="relative h-[480px] w-full overflow-hidden">
-                <AnimatePresence custom={direction}>
-                    <StepCard 
-                        key={stepIndex} 
-                        step={flow.steps[stepIndex]} 
-                        direction={direction}
-                    />
-                </AnimatePresence>
-            </div>
-
-            {/* Static Footer Navigation */}
-            <div className="flex items-center justify-between pt-2 border-t border-neutral-100 mt-0 h-20 shrink-0">
-                <button
-                    onClick={handlePrev}
-                    className="flex items-center gap-2 text-neutral-400 hover:text-neutral-900 transition-colors text-sm font-semibold px-4 py-2 rounded-xl hover:bg-neutral-50 active:scale-95 transition-transform"
-                >
-                    <ArrowLeft size={18} strokeWidth={2} />
-                    <span>Retour</span>
-                </button>
-                
-                {/* Progress Indicators */}
-                <div className="flex gap-2">
-                    {Array.from({length: flow.steps.length}).map((_, i) => (
-                        <div 
-                            key={i}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${i === stepIndex ? 'w-6 bg-black' : 'w-1.5 bg-neutral-200'}`} 
-                        />
-                    ))}
-                </div>
-
-                {/* Next Button / Complete Button */}
-                <div className="w-[120px] flex justify-end">
-                    <motion.button
-                        onClick={handleNext}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-2 text-white bg-black px-5 py-2.5 rounded-full font-semibold text-sm shadow-lg hover:shadow-xl transition-all"
-                    >
-                        <span>{isLast ? 'Terminer' : 'Suivant'}</span>
-                        <ArrowRight size={16} strokeWidth={2.5} />
-                    </motion.button>
-                </div>
-            </div>
-        </motion.div>
-    );
 };
 
 // --- LOGOS ---
@@ -193,39 +78,39 @@ const AppleLogo = ({ className }: { className?: string }) => (
 );
 
 const OSSelector: React.FC<{ onSelect: (os: OS) => void }> = ({ onSelect }) => {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
-            className="w-full flex flex-col items-center max-w-lg px-4"
-        >
-            <div className="text-center mb-10 md:mb-14">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 text-neutral-900">Bienvenue</h1>
-                <p className="text-neutral-500 font-medium text-base md:text-lg">Choisis ta plateforme.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <OSButton 
-                    // Windows logo: Dense block. 
-                    // Size: 96px (md) inside a 128px container.
-                    icon={<WindowsLogo className="w-20 h-20 md:w-24 md:h-24" />}
-                    title="Windows"
-                    subtitle=".exe"
-                    onClick={() => onSelect('windows')}
-                />
-                <OSButton 
-                    // Apple logo: Fine shape.
-                    // Size: 128px (md) inside a 128px container.
-                    // This creates optical balance.
-                    icon={<AppleLogo className="w-24 h-24 md:w-32 md:h-32 -mt-2" />}
-                    title="macOS"
-                    subtitle=".zip / .dmg"
-                    onClick={() => onSelect('mac')}
-                />
-            </div>
-        </motion.div>
-    )
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20, filter: "blur(10px)" }}
+      className="w-full flex flex-col items-center max-w-lg px-4"
+    >
+      <div className="text-center mb-10 md:mb-14">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 text-neutral-900">Configuration</h1>
+        <p className="text-neutral-500 font-medium text-base md:text-lg">Choisis ton système d'exploitation.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        <OSButton
+          // Windows logo: Dense block. 
+          // Size: 96px (md) inside a 128px container.
+          icon={<WindowsLogo className="w-20 h-20 md:w-24 md:h-24" />}
+          title="Windows"
+          subtitle=".exe"
+          onClick={() => onSelect('windows')}
+        />
+        <OSButton
+          // Apple logo: Fine shape.
+          // Size: 128px (md) inside a 128px container.
+          // This creates optical balance.
+          icon={<AppleLogo className="w-24 h-24 md:w-32 md:h-32 -mt-2" />}
+          title="macOS"
+          subtitle=".zip / .dmg"
+          onClick={() => onSelect('mac')}
+        />
+      </div>
+    </motion.div>
+  )
 }
 
 interface OSButtonProps {
@@ -251,7 +136,7 @@ const OSButton: React.FC<OSButtonProps> = ({ icon, title, subtitle, onClick }) =
       <div className="h-24 md:h-32 w-full flex items-center justify-center text-neutral-900 group-hover:scale-110 transition-transform duration-300 drop-shadow-sm mb-6">
         {icon}
       </div>
-      
+
       <div className="text-center flex flex-col gap-1">
         <h3 className="text-2xl font-bold text-neutral-900 tracking-tight">{title}</h3>
         <p className="text-neutral-500 font-medium text-sm md:text-base">{subtitle}</p>
